@@ -1,0 +1,46 @@
+name: Re-Publish Container App
+
+on: [workflow_dispatch]
+
+env:
+  APP_NAME: d-cap-blog-backend
+  RESSOURCE_GROUP: d-rg-inflab-fb
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Login to Azure with Secret 
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      # Deploy as Container App and Branch-Label
+      - name: Deploy to containerapp
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az containerapp update -n ${{ env.APP_NAME }} -g ${{ env.RESSOURCE_GROUP }}
+
+          #  Ganzes Deployment Beispiel
+          # env:
+          #   GHCR_IMAGE: ghcr.io/hftm-inf/blog-backend
+          #   BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+          # steps:
+          #  Login with a Repository Secret with a Token with Access to GitHub Packages
+          #  - name: Login to GHCR
+          #   uses: docker/login-action@v1
+          #   with:
+          #     registry: ghcr.io
+          #     username: ${{ github.repository_owner }}
+          #     password: ${{ secrets.GHCR_PASSWORD }}
+          #  inlineScript: |
+          #   az config set extension.use_dynamic_install=yes_without_prompt
+          #   az containerapp registry set -n ${{ env.APP_NAME }} -g ${{ env.RESSOURCE_GROUP }} --server ghcr.io --username  ${{ github.repository_owner }} --password ${{ secrets.GHCR_PASSWORD }}
+          #   az containerapp update -n ${{ env.APP_NAME }} -g ${{ env.RESSOURCE_GROUP }} --revision-suffix ${{ github.sha }} --image ${{ env.GHCR_IMAGE }}:${{ github.sha }}
+          #   az containerapp revision label remove -n ${{ env.APP_NAME }} -g ${{ env.RESSOURCE_GROUP }} --label ${{ env.BRANCH_NAME }}
+          #   az containerapp revision label add --revision ${{ env.APP_NAME }}--${{ github.sha }} -g ${{ env.RESSOURCE_GROUP }} --label ${{ env.BRANCH_NAME }}

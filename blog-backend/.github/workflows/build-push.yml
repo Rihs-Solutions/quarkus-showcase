@@ -1,0 +1,49 @@
+name: Build JVM Image and Push Docker Image
+
+on: [workflow_dispatch]
+
+env:
+  GHCR_IMAGE: ghcr.io/hftm-inf/blog-backend
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: maven
+          
+      - name: Access-Rights for maven execution
+        run: chmod +x mvnw
+        
+      - name: Build with Maven
+        run: ./mvnw package
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        
+      # Login with a Repository Secret with a Token with Access to GitHub Packages
+      - name: Login to GHCR
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+      
+      # Build image with dockerfile and context 
+      - name: Build image and push image
+        uses: docker/build-push-action@v2
+        with:
+          tags: ${{ env.GHCR_IMAGE }}:${{ github.sha }}, ${{ env.GHCR_IMAGE }}:${{ env.BRANCH_NAME }}, ${{ env.GHCR_IMAGE }}:latest
+          file: src/main/docker/Dockerfile.jvm
+          context: .
+          push: true
